@@ -1,0 +1,188 @@
+{
+  "name": "project",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://www.newsis.com/view/NISX20251128_0003421568",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        -192
+      ],
+      "id": "b6d7ea4f-6451-43c0-9704-77b30c4b5334",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=제시하는 링크의 내용을 분석하여, 의상 하나를 만들수 있는 프롬프트 제작\n설명하는 내용은 제외하고 프롬프트 내용만 무조건 출력.\n\n[링크]\n{{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -192
+      ],
+      "id": "54fa2a3b-3b07-48c6-8280-bb9d8fc61580",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "RZNga2DtWiL1rvDM",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AIzaSyCRC3YOyKxNwywjG4-RckXXV5mkVauAzkw"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"contents\": [{\n      \"parts\": [\n        {\"text\": \"{{ $json.content.parts[0].text }}\"}\n      ]\n    }]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        976,
+        -192
+      ],
+      "id": "8e0a7da7-ca4c-4f70-baf1-13e593ce7fa7",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        -192
+      ],
+      "id": "490e038e-b6b1-4323-92dd-0d93ee0de143",
+      "name": "Edit Fields8"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -192
+      ],
+      "id": "fbb3be11-e3cd-4453-8531-3674565dea3d",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        -192
+      ],
+      "id": "d1b0fb4f-6da9-4772-b5a9-a15d98dac006",
+      "name": "Execute Command2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields8": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Execute Command2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "82142d25-6803-4b2f-918a-8bbf691dd227",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f374bcaf97eaa22a4c48e9f88410138633a03fd3528943967a0d6632449c909e"
+  },
+  "id": "b7l56JaOIL7Pz473",
+  "tags": []
+}
