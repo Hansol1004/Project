@@ -35,7 +35,7 @@
           "parameters": [
             {
               "name": "x-goog-api-key",
-              "value": "AIzaSyAou9G6BXR9fmI4UcC2ZQi3XhDdCkDSYwg"
+              "value": ""
             },
             {
               "name": "Content-Type",
@@ -98,7 +98,7 @@
           "parameters": [
             {
               "name": "x-goog-api-key",
-              "value": "AIzaSyAou9G6BXR9fmI4UcC2ZQi3XhDdCkDSYwg"
+              "value": ""
             }
           ]
         },
@@ -138,7 +138,7 @@
           "parameters": [
             {
               "name": "x-goog-api-key",
-              "value": "AIzaSyAou9G6BXR9fmI4UcC2ZQi3XhDdCkDSYwg"
+              "value": ""
             }
           ]
         },
@@ -205,7 +205,7 @@
           "parameters": [
             {
               "name": "x-goog-api-key",
-              "value": "AIzaSyAou9G6BXR9fmI4UcC2ZQi3XhDdCkDSYwg"
+              "value": ""
             }
           ]
         },
