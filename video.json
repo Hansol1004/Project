@@ -1,0 +1,326 @@
+{
+  "name": "Gemini Veo Video Generator (Multi Output)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1936,
+        96
+      ],
+      "id": "35b965f9-cb99-44f0-9e7a-c2bcd17e25cd",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://search.naver.com/search.naver?where=news&ie=utf8&sm=nws_hty&query=%ED%8C%A8%EC%85%98",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1728,
+        96
+      ],
+      "id": "04b28888-f01d-47cd-96d9-45d4de1f50bf",
+      "name": "HTTP Request1 (패션 뉴스 소스 가져오기)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AIzaSyAou9G6BXR9fmI4UcC2ZQi3XhDdCkDSYwg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"prompt\": \"{{ $json.content.parts[0].text }}\",\n  \"config\": {\n    \"numberOfImages\": 1,\n    \"outputMimeType\": \"image/jpeg\",\n    \"aspectRatio\": \"1:1\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1232,
+        96
+      ],
+      "id": "58c870ed-8d5e-4da3-a54e-2e1906e6b4d0",
+      "name": "HTTP Request (이미지 생성)"
+    },
+    {
+      "parameters": {
+        "content": "이미지 생성 후, 영상 제작",
+        "height": 464,
+        "width": 1648
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        32
+      ],
+      "id": "e0597fab-a3a1-4aed-a39a-f016e2d15958",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=아래에 제공되는 data를 참고하여, 현재 최신 트렌드에 맞는 독창적이고 고품질의 패션 이미지 생성 프롬프트를 영어로 간결하게 작성해주세요. 프롬프트는 50단어 이내로, 스타일(예: photorealistic, cinematic lighting)을 포함해야 합니다.\n[data]\n{{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1552,
+        96
+      ],
+      "id": "53c36a5b-84dd-4b9c-b17e-ac5408c17e9e",
+      "name": "Message a model (트렌드 분석 및 프롬프트 생성)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lCZVhKicpVeHiXcB",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// 이전 노드(이미지 생성)의 출력에서 첫 번째 아이템을 가져옵니다.\nconst image_data = items[0];\n\n// 동영상 1, 2에 사용할 프롬프트와 설정을 정의합니다.\n// 이 프롬프트는 Veo API의 'prompt' 필드에 들어갈 값입니다.\nconst video_prompts = [\n  {\n    \"video_id\": \"video_a\",\n    \"prompt_text\": \"A sophisticated and moody slow-motion video, emphasizing the luxurious texture of the fabric in low light. cinematic black and white.\",\n    \"duration\": \"5s\"\n  },\n  {\n    \"video_id\": \"video_b\",\n    \"prompt_text\": \"A fast-paced, vibrant, colorful video clip suitable for Instagram Reels, showing the model walking briskly in urban daylight. upbeat music.\",\n    \"duration\": \"7s\"\n  }\n];\n\n// 각 프롬프트에 이미지 데이터를 결합하여 출력합니다.\nlet outputItems = [];\nfor (const prompt_config of video_prompts) {\n  // 기존 이미지 데이터를 복사하고 프롬프트와 설정을 추가합니다.\n  const newItem = {\n    ...image_data.json, // 이미지 생성 노드의 JSON 출력 전체를 포함합니다.\n    ...prompt_config // video_id, prompt_text, duration을 추가합니다.\n  };\n  outputItems.push({ json: newItem });\n}\n\n// 다음 노드로 2개의 아이템을 출력합니다.\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        96
+      ],
+      "id": "2d1f705b-8c63-4f9e-a8a5-d5e0892a008d",
+      "name": "Function (프롬프트 분기)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/tactile-buckeye-477208-p4/locations/us-central1/publishers/google/models/veo:generateVideos",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"referenceImages\": [\n    {\n      \"image\": {\n        \"imageBytes\": \"{{ $('HTTP Request (이미지 생성)').item.json.candidates[0].image.imageBytes }}\"\n      }\n    }\n  ],\n  \"prompt\": \"{{ $json.final_prompt }}\",\n  \"duration\": \"{{ $json.duration }}\",\n  \"config\": {\n    \"numberOfVideos\": 1\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -432,
+        -16
+      ],
+      "id": "d0e12d1b-008a-449e-b835-2b4a3a6b57d0",
+      "name": "HTTP Request (영상 A 생성)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/tactile-buckeye-477208-p4/locations/us-central1/publishers/google/models/veo:generateVideos",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"referenceImages\": [\n    {\n      \"image\": {\n        \"imageBytes\": \"{{ $('HTTP Request (이미지 생성)').item.json.candidates[0].image.imageBytes }}\"\n      }\n    }\n  ],\n  \"prompt\": \"{{ $json.final_prompt }}\",\n  \"duration\": \"{{ $json.duration }}\",\n  \"config\": {\n    \"numberOfVideos\": 1\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -432,
+        208
+      ],
+      "id": "e6a0d24c-1d00-4b89-a2e6-7a13d70f3f20",
+      "name": "HTTP Request (영상 B 생성)"
+    },
+    {
+      "parameters": {
+        "mode": "rename",
+        "fieldName": "prompt_text",
+        "renameFieldName": "final_prompt",
+        "renameMode": "json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editFields",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        96
+      ],
+      "id": "a0c32b90-1e5b-4c54-b52e-c12808c48a7b",
+      "name": "Edit Fields (프롬프트 확인/수정)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "mode": "and",
+          "value": [
+            {
+              "value1": "={{ $json.video_id }}",
+              "operation": "equal",
+              "value2": "video_a"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [
+        -616,
+        -16
+      ],
+      "id": "d48a1c93-548c-4b5b-80a5-50284458f338",
+      "name": "Filter (영상 A 전용)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "mode": "and",
+          "value": [
+            {
+              "value1": "={{ $json.video_id }}",
+              "operation": "equal",
+              "value2": "video_b"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [
+        -616,
+        208
+      ],
+      "id": "b0f9f30b-52c6-4d0c-a99f-7b1f13b1f3c1",
+      "name": "Filter (영상 B 전용)"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1 (패션 뉴스 소스 가져오기)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1 (패션 뉴스 소스 가져오기)": {
+      "main": [
+        [
+          {
+            "node": "Message a model (트렌드 분석 및 프롬프트 생성)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (이미지 생성)": {
+      "main": [
+        [
+          {
+            "node": "Function (프롬프트 분기)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model (트렌드 분석 및 프롬프트 생성)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (이미지 생성)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function (프롬프트 분기)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields (프롬프트 확인/수정)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields (프롬프트 확인/수정)": {
+      "main": [
+        [
+          {
+            "node": "Filter (영상 A 전용)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter (영상 B 전용)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter (영상 A 전용)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (영상 A 생성)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter (영상 B 전용)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (영상 B 생성)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ccb3cdf-a7f4-45c9-aa86-5d34b4a93580",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f374bcaf97eaa22a4c48e9f88410138633a03fd3528943967a0d6632449c909e"
+  },
+  "id": "b7l56JaOIL7Pz473",
+  "tags": []
+}
