@@ -1,0 +1,158 @@
+{
+  "name": "AI Agent 기반 패션 이미지 및 합성 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1000,
+        0
+      ],
+      "id": "c412f494-2002-4472-807e-17aa50e766f9",
+      "name": "When chat message received (채팅 메시지 수신 시)",
+      "webhookId": "agent_trigger_id"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemInstruction": "당신은 30년 경력의 패션 AI 이미지 생성 및 합성 전문가 AI 에이전트입니다. 사용자 요청을 분석하여, **동영상 제작은 제외**하고 오직 **최신 트렌드 의류/아바타 이미지 생성** 또는 **사용자 사진 기반 의류 합성 이미지 생성**이라는 두 가지 주요 목표를 달성합니다.\n\n### 주요 작업 목표 및 도구 사용 지침\n\n1.  **입력 분석 및 경로 결정:**\n    * 사용자 요청에 이미지 파일(Base64 또는 URL)이 첨부되어 있는지 확인합니다.\n\n2.  **경로 A: 최신 트렌드 기반 이미지 생성 (이미지 첨부 없음)**\n    * **도구:** '패션 트렌드 검색 도구 (Google Search)'를 사용하여 최신 패션 뉴스 및 트렌드('Current fashion trends')를 검색합니다.\n    * **목표:** 검색 결과를 바탕으로 독창적인 의류/아바타에 대한 상세한 영어 이미지 생성 프롬프트(50단어 이내, 스타일 포함)를 작성합니다.\n    * **API 호출:** 'API 호출 도구'를 사용해 프롬프트를 이미지 생성 API(예: Imagen 4.0의 text-to-image)에 전송하여 최종 이미지를 생성합니다.\n\n3.  **경로 B: 사용자 사진 합성 이미지 생성 (이미지 첨부 있음)**\n    * **도구:** '패션 트렌드 검색 도구 (Google Search)'를 **사용하지 않습니다**.\n    * **목표:** 사용자 사진 데이터(URL 또는 Base64)와 요청된 의류 스타일을 결합하는 '이미지 합성/편집' 프롬프트를 작성합니다. (예: 'User's photo wearing a high-fashion denim jacket').\n    * **API 호출:** 'API 호출 도구'를 사용해 사용자 사진 데이터와 합성 프롬프트를 이미지 합성/편집 API(예: Image-to-Image 모델)에 전송하여 합성 이미지를 생성합니다.\n\n4.  **결과 보고:**\n    * 'API 호출 도구'를 통해 최종 생성된 **고화질 이미지 URL 또는 Base64 데이터를 사용자에게 반환**합니다. 반드시 최종 이미지 링크를 사용자에게 직접 보여주어야 합니다."
+        },
+        "llm": "6f05cb6b-cf7d-4ae4-9c20-228d5c249001",
+        "tools": [
+          "a926d7c7-60e0-47e2-a083-d97155097477",
+          "5f9c5d09-b42e-4366-9a25-c65934a3625f"
+        ],
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -750,
+        0
+      ],
+      "id": "6f05cb6b-cf7d-4ae4-9c20-228d5c249001",
+      "name": "AI Agent (패션 이미지 생성/합성 에이전트)"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -150
+      ],
+      "id": "01c9c43d-0d61-4f11-9252-47526715d999",
+      "name": "Google Gemini Chat Model (언어 모델)"
+    },
+    {
+      "parameters": {
+        "queries": "={{ $json.toolInput }}"
+      },
+      "type": "n8n-nodes-base.googleSearch",
+      "typeVersion": 2,
+      "position": [
+        -1000,
+        150
+      ],
+      "id": "a926d7c7-60e0-47e2-a083-d97155097477",
+      "name": "패션 트렌드 검색 도구 (Google Search)"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.toolInput.url }}",
+        "method": "={{ $json.toolInput.method }}",
+        "options": {
+          "bodyContentType": "json",
+          "fullResponse": true,
+          "bodyParameters": {
+            "content": "={{ $json.toolInput.body }}"
+          },
+          "authentication": "headerAuth",
+          "httpHeader": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.API_KEY_IMAGEN_SYNTHESIS }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1000,
+        300
+      ],
+      "id": "5f9c5d09-b42e-4366-9a25-c65934a3625f",
+      "name": "API 호출 도구 (HTTP Request - 이미지 생성 및 합성)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.chatMessage",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        0
+      ],
+      "id": "8d4f0d3a-23c2-4a0f-a9b8-4e89f81f1c7d",
+      "name": "AI Agent 응답 (Chat Message)"
+    }
+  ],
+  "connections": {
+    "When chat message received (채팅 메시지 수신 시)": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (패션 이미지 생성/합성 에이전트)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (패션 이미지 생성/합성 에이전트)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Google Gemini Chat Model (언어 모델)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "패션 트렌드 검색 도구 (Google Search)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API 호출 도구 (HTTP Request - 이미지 생성 및 합성)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "AI Agent 응답 (Chat Message)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataExpirationTimes": {}
+  }
+}

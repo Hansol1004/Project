@@ -1,0 +1,194 @@
+{
+  "name": "Fixed Gemini Veo Logic",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 1. 텍스트 프롬프트 가져오기\n// 사용자가 업로드한 파일의 노드 이름인 'Message a model...'을 기준으로 데이터를 가져옵니다.\nlet geminiText = \"\";\ntry {\n  // 노드 이름이 'Message a model...1' 일 수도 있고 아닐 수도 있어서 둘 다 찾아봅니다.\n  const node1 = $(\"Message a model (트렌드 분석 및 프롬프트 생성)1\").first();\n  const node2 = $(\"Message a model (트렌드 분석 및 프롬프트 생성)\").first();\n  \n  // 실제 데이터가 있는 경우에만 가져오고, 없으면 빈 문자열로 둡니다.\n  geminiText = (node1 ? (node1.json.content || node1.json.output) : \"\") || \n               (node2 ? (node2.json.content || node2.json.output) : \"\") ||\n               \"\";\n} catch (e) {\n  // 이전 노드를 찾지 못했을 때의 처리\n  geminiText = \"\";\n}\n\nif (!geminiText) {\n   // 프롬프트가 없으면 진행 의미가 없으므로 에러 처리 (테스트 시에는 이 부분을 주석 처리 가능)\n   throw new Error(\"❌ 이전 단계에서 텍스트 프롬프트를 찾을 수 없습니다. 'Message a model' 노드의 출력을 확인해주세요.\");\n}\n\n// 2. 이미지 URL 가져오기 [수정된 부분]\n// 더 이상 가짜(placeholder) 주소를 쓰지 않습니다. \n// 실제 데이터가 없으면 에러를 발생시킵니다.\nlet imageUrl = \"\";\ntry {\n  const imgNode = $(\"HTTP Request (이미지 생성)1\").first() || $(\"HTTP Request (이미지 생성)\").first();\n  \n  if (imgNode) {\n    // 다양한 API 응답 패턴을 모두 검사하여 실제 URL을 찾습니다.\n    imageUrl = imgNode.json.url || \n               imgNode.json.output_url || \n               imgNode.json.result || \n               (imgNode.json.data && imgNode.json.data[0] ? imgNode.json.data[0].url : \"\") ||\n               null;\n  }\n} catch (e) {\n  imageUrl = null;\n}\n\n// [중요] 실제 이미지가 없으면 여기서 멈춥니다.\nif (!imageUrl) {\n  throw new Error(\"❌ 이전 단계에서 생성된 이미지 URL을 찾을 수 없습니다. 'HTTP Request (이미지 생성)' 노드의 결과값(JSON)에 url, output_url, result 중 하나가 있는지 확인해주세요.\");\n}\n\n// 3. 텍스트 분리 로직 (Prompt 1, Prompt 2 추출)\nconst lines = geminiText.split('\\n');\nconst prompt1 = lines.find(l => l.includes(\"Prompt 1\") || l.includes(\"첫번째\")) || lines[0] || \"Default Prompt 1\";\nconst prompt2 = lines.find(l => l.includes(\"Prompt 2\") || l.includes(\"두번째\")) || lines[1] || \"Default Prompt 2\";\n\n// 4. 결과 반환\n// 이제 'base_image'에는 무조건 실제 URL만 들어갑니다.\nreturn [\n  {\n    json: {\n      id: \"video_01\",\n      video_prompt: prompt1.replace(/Video Prompt 1:|Prompt 1:/gi, \"\").trim(),\n      base_image: imageUrl\n    }\n  },\n  {\n    json: {\n      id: \"video_02\",\n      video_prompt: prompt2.replace(/Video Prompt 2:|Prompt 2:/gi, \"\").trim(),\n      base_image: imageUrl\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "code_splitter_node",
+      "name": "Code (데이터 분리 및 병합)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.your-video-provider.com/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text_prompt",
+              "value": "={{ $json.video_prompt }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $json.base_image }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        220,
+        0
+      ],
+      "id": "http_start_generation",
+      "name": "HTTP Request (생성 요청)"
+    },
+    {
+      "parameters": {
+        "amount": 20,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "wait_node",
+      "name": "Wait (20초 대기)"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.status_url || $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_KEY_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        660,
+        0
+      ],
+      "id": "http_check_status",
+      "name": "HTTP Request (상태 확인)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status || $json.state }}",
+              "value2": "completed"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "check_condition",
+      "name": "완료되었는가?"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.output_url || $json.video_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1100,
+        -100
+      ],
+      "id": "download_video",
+      "name": "결과 다운로드"
+    }
+  ],
+  "connections": {
+    "Code (데이터 분리 및 병합)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (생성 요청)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (생성 요청)": {
+      "main": [
+        [
+          {
+            "node": "Wait (20초 대기)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (20초 대기)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (상태 확인)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (상태 확인)": {
+      "main": [
+        [
+          {
+            "node": "완료되었는가?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "완료되었는가?": {
+      "main": [
+        [
+          {
+            "node": "결과 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (20초 대기)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

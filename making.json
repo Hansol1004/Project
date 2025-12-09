@@ -1,0 +1,168 @@
+{
+  "name": "Fixed Image to Image Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "파일을 첨부하세요",
+        "formDescription": "파일첨부",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Photo",
+              "fieldType": "file",
+              "acceptFileTypes": ".jpeg, .png, .jpg",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -380,
+        -140
+      ],
+      "id": "f13cfbfb-f322-4b62-b512-c8d680852131",
+      "name": "On form submission",
+      "webhookId": "523c67c7-4710-4f41-93fd-693c5a14da7a"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=아래에 제공되는 data를 참고하여, 현재 최신 트렌드에 맞는 독창적이고 고품질의 패션 이미지 생성 프롬프트를 영어로 간결하게 작성해주세요. 프롬프트는 50단어 이내로, 스타일(예: photorealistic, cinematic lighting)을 포함해야 합니다.\n프롬프트 text 안에는 다른 내용 전부 빼고, 무조건 묘사에 관한 내용만 기술되어야합니다.\n[data]\n{{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        100
+      ],
+      "id": "1b73deb2-98ec-49ed-866d-1283d1f00321",
+      "name": "Message a model (프롬프트 생성)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "AzwYzbnGG5glZ9mf",
+          "name": "Google Gemini(PaLM) Api account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-goog-api-key",
+              "value": "YOUR_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"{{ $json.content.parts[0].text.trim() }} Apply these fashion elements to the person in the attached image.\"\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $binary.Photo.mimeType }}\",\n            \"data\": \"{{ $binary.Photo.data }}\"\n          }\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        340,
+        -20
+      ],
+      "id": "8ee643da-2ae2-4ed4-b46d-34017b25b769",
+      "name": "HTTP Request (이미지+프롬프트 전송)"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        120,
+        -20
+      ],
+      "id": "add-merge-node-id",
+      "name": "Merge Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 더미 데이터 (테스트용)\nreturn [\n  {\n    json: {\n      data: \"2024 Winter Fashion Trends: Padding vests, oversized coats\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        100
+      ],
+      "id": "dummy-data-generator",
+      "name": "Dummy Data (테스트용)"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dummy Data (테스트용)": {
+      "main": [
+        [
+          {
+            "node": "Message a model (프롬프트 생성)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model (프롬프트 생성)": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (이미지+프롬프트 전송)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
